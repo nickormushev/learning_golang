@@ -1,0 +1,38 @@
+HTTP server that does a gracefull shutdown when you press ctrl + c or when I press kill.
+
+Viper - gives configuration to applications. Give data to the http server. Port number where the http server will listen. Give configuration to your http server
+
+Write a SAML service provider after the above two. Decode saml request.
+https://github.com/gbraad/passport-saml-example
+
+XML decoding: 
+[15:40] Penev, Alexander (Guest)
+    
+
+let e = Buffer.from(decodeURI(req.query.SAMLRequest), 'base64');
+
+​[15:40] Penev, Alexander (Guest)
+    
+
+zlib.inflateRaw(e, (err, buffer) => {
+ parseString(buffer.toString(), function (err, r) {
+
+
+//Encode and decode saml. If you want try to decode it by hand
+app.get('/saml/callback', function (req, res, next) {
+ 
+ let e = Buffer.from(decodeURI(req.query.SAMLRequest), 'base64');
+ zlib.inflateRaw(e, (err, buffer) => {
+ parseString(buffer.toString(), function (err, r) {
+ 
+ r['samlp:AuthnRequest']['$']['Destination'] = 'https://alqauatzc.accounts400.ondemand.com/saml2/idp/sso/alqauatzc.accounts400.ondemand.com';
+ r['samlp:AuthnRequest']['saml:Issuer'][0]['_'] = 'ias-saml-demo2';
+ var builder = new xml2js.Builder();
+ var xml = builder.buildObject(r);
+ zlib.deflateRaw(xml, (err, b) => {
+ let ns = encodeURIComponent(Buffer.from(b, 'utf8').toString('base64'));
+ res.redirect(307, 'https://alqauatzc.accounts400.ondemand.com/saml2/idp/sso/alqauatzc.accounts400.ondemand.com?SAMLRequest=' + ns);
+ });
+ });
+ });
+});

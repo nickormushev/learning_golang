@@ -1,0 +1,22 @@
+1)
+Methods should have the structure be named with the first letter of the structure name.
+func (c Circle) () {
+
+}
+
+2) 
+I should be consistent about writing methods either as *Circle or Circle. It does not matter if I want
+to change the value of the variable or not. This is strange considering that someone might tamper and knowing
+private and public conventions from c++ and java
+
+3) 
+It might be a good idea to put helper functions in seperate functions outside of the main test classes so a person can focus on the 
+tests and not on the helpers
+
+
+4) 
+Link to error best praciteces. TLDR errors.Wrap and errors.Cause
+https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
+
+5)
+Package names should be short concise and only single word with lower case letters
