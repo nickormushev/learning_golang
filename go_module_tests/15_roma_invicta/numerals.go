@@ -4,7 +4,6 @@ import (
 	"strings"
 )
 
-//ConvertToRomanV1 converts integers to roman numerals version1
 func ConvertToRomanV1(num int) string {
 	switch num {
 	case 1:

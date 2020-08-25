@@ -1,13 +1,36 @@
 package poker
 
 import (
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
+	"time"
 )
+
+type SpyGame struct {
+	StartCalled     bool
+	StartCalledWith int
+	BlindAlert      []byte
+
+	WinCalled     bool
+	WinCalledWith string
+}
+
+func (s *SpyGame) Start(numberOfPlayers int, to io.Writer) {
+	s.StartCalled = true
+	s.StartCalledWith = numberOfPlayers
+
+	to.Write(s.BlindAlert)
+}
+
+func (s *SpyGame) Win(winner string) {
+	s.WinCalled = true
+	s.WinCalledWith = winner
+}
 
 type StubPlayerStore struct {
 	scores   map[string]int
@@ -25,6 +48,59 @@ func (s *StubPlayerStore) RecordWin(playerName string) {
 
 func (s StubPlayerStore) GetLeague() League {
 	return s.league
+}
+
+func retryUntil(d time.Duration, f func() bool) bool {
+	deadline := time.Now().Add(d)
+	for time.Now().Before(deadline) {
+		if f() {
+			return true
+		}
+	}
+	return false
+}
+
+func CreateNewPlayerServer(t *testing.T, store PlayerStore, game AbstractGame) *PlayerServer {
+	t.Helper()
+	server, err := NewPlayerServer(store, game)
+
+	if err != nil {
+		t.Fatalf("Failed to create NewPlayerServer with error %v", err)
+	}
+
+	return server
+}
+
+func AssertGameStartedWithXNumberOfPlayers(t *testing.T, game *SpyGame, numberOfPlayers int) {
+	t.Helper()
+
+	passed := retryUntil(500*time.Millisecond, func() bool {
+		return game.StartCalled && game.StartCalledWith == numberOfPlayers
+	})
+
+	if !passed {
+		t.Errorf("expected start called with %d but got %d", numberOfPlayers, game.StartCalledWith)
+	}
+}
+
+func AssertStartGameNumberOfPlayers(t *testing.T, got, want int) {
+	t.Helper()
+
+	if got != want {
+		t.Errorf("got number of players %q, but wanted %q", got, want)
+	}
+}
+
+func AssertGameWinCalled(t *testing.T, game *SpyGame, player string) {
+	t.Helper()
+
+	passed := retryUntil(500*time.Millisecond, func() bool {
+		return game.WinCalled && game.WinCalledWith == player
+	})
+
+	if !passed {
+		t.Errorf("expected finish called with %q but got %q", player, game.WinCalledWith)
+	}
 }
 
 func AssertElementInArray(t *testing.T, sl []string, want string) {

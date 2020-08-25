@@ -19,7 +19,7 @@ func main() {
 		log.Fatalf("Could not generate FileSystem player store from file, %v", err)
 	}
 
-	game := poker.NewGame(store, poker.BlindAlerterFunc(poker.StdOutAlerter))
+	game := poker.NewGame(store, poker.BlindAlerterFunc(poker.GenericAlerter))
 	gameCLI := poker.NewCLI(game, os.Stdin, os.Stdout)
 
 	fmt.Print("It's poker time\n")

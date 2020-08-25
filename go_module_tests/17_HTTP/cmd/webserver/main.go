@@ -17,7 +17,13 @@ func main() {
 		log.Fatalf("Could not generate FileSystem player store from file, %v", err)
 	}
 
-	server := poker.NewPlayerServer(store)
+	game := poker.NewGame(store, poker.BlindAlerterFunc(poker.GenericAlerter))
+	server, err := poker.NewPlayerServer(store, game)
+
+	if err != nil {
+		log.Fatalf("Failed to create a playerServer %v", err)
+	}
+
 	//srv := &http.Server{Addr: ":5000", Handler: server}
 
 	//go func() {

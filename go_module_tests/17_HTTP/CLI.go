@@ -48,7 +48,7 @@ func (c *CLI) PlayPoker() error {
 		return InvalidInputError
 	}
 
-	c.game.Start(numberOfPlayers)
+	c.game.Start(numberOfPlayers, c.output)
 
 	userInput := c.readLine()
 	c.game.Win(extractWinner(userInput))

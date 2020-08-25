@@ -8,19 +8,6 @@ import (
 	"testing"
 )
 
-type SpyGame struct {
-	startNumberOfPlayers int
-	winCalls             []string
-}
-
-func (s *SpyGame) Start(numberOfPlayers int) {
-	s.startNumberOfPlayers = numberOfPlayers
-}
-
-func (s *SpyGame) Win(winner string) {
-	s.winCalls = append(s.winCalls, winner)
-}
-
 func TestCLI(t *testing.T) {
 	cases := []struct {
 		Name               string
@@ -37,7 +24,7 @@ func TestCLI(t *testing.T) {
 			in := strings.NewReader(test.StartPlayersString + test.Input)
 			stdout := &bytes.Buffer{}
 
-			game := &SpyGame{}
+			game := &poker.SpyGame{}
 			cli := poker.NewCLI(game, in, stdout)
 
 			err := cli.PlayPoker()
@@ -45,15 +32,15 @@ func TestCLI(t *testing.T) {
 			poker.AssertNoError(t, err)
 
 			assertMessagesSentToUser(t, stdout, poker.PlayerPrompt)
-			assertStartGameNumberOfPlayers(t, game.startNumberOfPlayers, test.StartPlayersInt)
-			assertGameWinCalled(t, game, test.Name)
+			poker.AssertStartGameNumberOfPlayers(t, game.StartCalledWith, test.StartPlayersInt)
+			poker.AssertGameWinCalled(t, game, test.Name)
 		})
 	}
 
 	t.Run("PlayPoker should return error when user inputs non number value as numberOfPlayers", func(t *testing.T) {
 		in := strings.NewReader("u\n")
 		stdout := &bytes.Buffer{}
-		game := &SpyGame{}
+		game := &poker.SpyGame{}
 		cli := poker.NewCLI(game, in, stdout)
 
 		err := cli.PlayPoker()
@@ -67,19 +54,11 @@ func TestCLI(t *testing.T) {
 	})
 }
 
-func assertGameNotStarted(t *testing.T, game *SpyGame) {
+func assertGameNotStarted(t *testing.T, game *poker.SpyGame) {
 	t.Helper()
 
-	if game.startNumberOfPlayers != 0 {
+	if game.StartCalledWith != 0 {
 		t.Fatalf("Game started when an error should have been thrown")
-	}
-}
-
-func assertStartGameNumberOfPlayers(t *testing.T, got, want int) {
-	t.Helper()
-
-	if got != want {
-		t.Errorf("got number of players %q, but wanted %q", got, want)
 	}
 }
 
@@ -88,11 +67,6 @@ func assertPlayerPrompt(t *testing.T, got, want string) {
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
-}
-
-func assertGameWinCalled(t *testing.T, game *SpyGame, player string) {
-	t.Helper()
-	poker.AssertElementInArray(t, game.winCalls, player)
 }
 
 func assertMessagesSentToUser(t *testing.T, stdout *bytes.Buffer, messages ...string) {

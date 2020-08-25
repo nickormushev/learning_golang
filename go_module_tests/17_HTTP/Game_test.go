@@ -2,6 +2,8 @@ package poker_test
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	poker "learning/17_HTTP"
 	"testing"
 	"time"
@@ -20,7 +22,7 @@ func (s scheduledAlert) String() string {
 	return fmt.Sprintf("%d chips at %v", s.amount, s.at)
 }
 
-func (s *SpyBlindAlerter) ScheduledAlertAt(duration time.Duration, amount int) {
+func (s *SpyBlindAlerter) ScheduledAlertAt(duration time.Duration, amount int, to io.Writer) {
 	s.alerts = append(s.alerts, scheduledAlert{duration, amount})
 }
 
@@ -85,7 +87,7 @@ func TestStart(t *testing.T) {
 			blindAlerter := &SpyBlindAlerter{}
 
 			game := poker.NewGame(playerStore, blindAlerter)
-			game.Start(test.numberOfPlayers)
+			game.Start(test.numberOfPlayers, ioutil.Discard)
 
 			for i, test := range test.alerts {
 				t.Run(fmt.Sprintf("Amount %d at time %v", test.amount, test.at), func(t *testing.T) {
