@@ -2,11 +2,14 @@ package main
 
 import (
 	poker "learning/17_HTTP"
+	server "learning/17_HTTP/server"
 	"log"
-	"net/http"
 )
 
-const dbFileName string = "game.db.json"
+const (
+	dbFileName string = "game.db.json"
+	serverPort string = ":5000"
+)
 
 func main() {
 	store, dbClose, err := poker.GenerateFileSystemPlayerStore(dbFileName)
@@ -18,21 +21,17 @@ func main() {
 	}
 
 	game := poker.NewGame(store, poker.BlindAlerterFunc(poker.GenericAlerter))
-	server, err := poker.NewPlayerServer(store, game)
+	playerServer, err := poker.NewPlayerServer(store, game)
+
+	ctx := server.GenerateContextWithSigint()
+	srv := server.CreateServerAndServe(ctx, playerServer, serverPort)
+
+	<-ctx.Done()
+	err = server.GracefullShutdown(ctx, srv)
 
 	if err != nil {
-		log.Fatalf("Failed to create a playerServer %v", err)
-	}
-
-	//srv := &http.Server{Addr: ":5000", Handler: server}
-
-	//go func() {
-	//	if err = srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-	//		log.Fatalf("An erro occured %v", err)
-	//	}
-	//}()
-
-	if err := http.ListenAndServe(":5000", server); err != nil {
-		log.Fatalf("An erro occured %v", err)
+		log.Fatalf("Failed to shutdown gracefully %v!", err)
+	} else {
+		log.Printf("Successful graceful shutdown of server")
 	}
 }
