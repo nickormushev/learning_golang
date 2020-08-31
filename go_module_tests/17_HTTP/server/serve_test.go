@@ -85,7 +85,6 @@ func TestAppStart(t *testing.T) {
 	poker.AssertTrueWithRetry(t, &srv.listenAndServeCalled)
 
 	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	time.Sleep(10 * time.Millisecond)
 
 	poker.AssertTrueWithRetry(t, &srv.shutdownCalled)
 	poker.AssertTrueWithRetry(t, &closeDbCalled)
