@@ -5,11 +5,13 @@ import (
 	"testing"
 )
 
+const fileName string = "db"
+
 func TestGETLeague(t *testing.T) {
 	t.Run("/league from a reader", func(t *testing.T) {
 		database, cleanDb := CreateTempFile(t, `[
             {"Name": "Cleo", "Wins": 10},
-            {"Name": "Chris", "Wins": 33}]`)
+            {"Name": "Chris", "Wins": 33}]`, fileName)
 
 		defer cleanDb()
 
@@ -32,7 +34,7 @@ func TestGETLeague(t *testing.T) {
             {"Name": "Cleo", "Wins": 10},
             {"Name": "Chris", "Wins": 33},
 				{"Name": "Joro", "Wins": 12},
-				{"Name": "Kiro", "Wins": 22}]`)
+				{"Name": "Kiro", "Wins": 22}]`, fileName)
 
 		defer cleanDb()
 
@@ -62,7 +64,7 @@ func TestPlayerScore(t *testing.T) {
 		t.Run(fmt.Sprintf("/players/%s score from a reader", test.Name), func(t *testing.T) {
 			database, cleanDb := CreateTempFile(t, `[
             {"Name": "Cleo", "Wins": 10},
-            {"Name": "Chris", "Wins": 33}]`)
+            {"Name": "Chris", "Wins": 33}]`, fileName)
 
 			defer cleanDb()
 
@@ -78,7 +80,7 @@ func TestPlayerScore(t *testing.T) {
 	t.Run("Test update player score", func(t *testing.T) {
 		database, cleanDb := CreateTempFile(t, `[
             {"Name": "Cleo", "Wins": 10},
-            {"Name": "Chris", "Wins": 33}]`)
+            {"Name": "Chris", "Wins": 33}]`, fileName)
 
 		defer cleanDb()
 
@@ -95,7 +97,7 @@ func TestPlayerScore(t *testing.T) {
 	t.Run("Update should create new user if non exists", func(t *testing.T) {
 		database, cleanDb := CreateTempFile(t, `[
     	      {"Name": "Cleo", "Wins": 10},
-    	      {"Name": "Chris", "Wins": 33}]`)
+    	      {"Name": "Chris", "Wins": 33}]`, fileName)
 
 		defer cleanDb()
 
@@ -113,7 +115,7 @@ func TestPlayerScore(t *testing.T) {
 
 func TestWorksWithEmptyFiles(t *testing.T) {
 	t.Run("works with an empty file", func(t *testing.T) {
-		database, cleanDatabase := CreateTempFile(t, "")
+		database, cleanDatabase := CreateTempFile(t, "", fileName)
 		defer cleanDatabase()
 
 		_, err := NewFileSystemPlayerStore(database)

@@ -1,37 +1,26 @@
 package main
 
 import (
-	poker "learning/17_HTTP"
+	configuration "learning/17_HTTP/config"
 	server "learning/17_HTTP/server"
 	"log"
+
+	"github.com/spf13/viper"
 )
 
 const (
-	dbFileName string = "game.db.json"
-	serverPort string = ":5000"
+	configFileName string = "viperConfig"
+	configFilePath string = "./config"
 )
 
 func main() {
-	store, dbClose, err := poker.GenerateFileSystemPlayerStore(dbFileName)
-
-	defer dbClose()
-
-	if err != nil {
-		log.Fatalf("Could not generate FileSystem player store from file, %v", err)
-	}
-
-	game := poker.NewGame(store, poker.BlindAlerterFunc(poker.GenericAlerter))
-	playerServer, err := poker.NewPlayerServer(store, game)
-
-	ctx := server.GenerateContextWithSigint()
-	srv := server.CreateServerAndServe(ctx, playerServer, serverPort)
-
-	<-ctx.Done()
-	err = server.GracefullShutdown(ctx, srv)
+	appConfig := configuration.NewConfiguration(viper.New())
+	err := appConfig.Read(configFileName, configFilePath, nil)
 
 	if err != nil {
-		log.Fatalf("Failed to shutdown gracefully %v!", err)
-	} else {
-		log.Printf("Successful graceful shutdown of server")
+		log.Fatalf("Could not read startup configuration file %v", err)
 	}
+
+	app := server.CreateDefaultApplication(appConfig)
+	app.Start()
 }

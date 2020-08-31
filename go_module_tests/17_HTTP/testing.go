@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+const (
+	FullFileName   string = "./temp_config.yaml"
+	FileName       string = "temp_config"
+	TestDbFileName string = "test.db.json"
+	TestServerPort string = "5000"
+)
+
 type SpyGame struct {
 	StartCalled     bool
 	StartCalledWith int
@@ -48,6 +55,33 @@ func (s *StubPlayerStore) RecordWin(playerName string) {
 
 func (s StubPlayerStore) GetLeague() League {
 	return s.league
+}
+
+func AssertTrueWithRetry(t *testing.T, got *bool) {
+	t.Helper()
+
+	passed := retryUntil(500*time.Millisecond, func() bool {
+		return *got
+	})
+
+	if !passed {
+		t.Errorf("expected true but got false")
+	}
+}
+
+func AssertFalse(t *testing.T, got bool) {
+	t.Helper()
+	if got {
+		t.Errorf("Expected false but got true")
+	}
+}
+
+func AssertError(t *testing.T, err error) {
+	t.Helper()
+
+	if err == nil {
+		t.Errorf("Expected error but got nil")
+	}
 }
 
 func retryUntil(d time.Duration, f func() bool) bool {
@@ -181,24 +215,47 @@ func AssertPlayerScore(t *testing.T, got, expectedPoints int) {
 	}
 }
 
-func CreateTempFile(t *testing.T, initialData string) (*os.File, func()) {
+//CreateTempFile creates a ioutil.temoFile  and returns it with a cancel() method to delete it
+func CreateTempFile(t *testing.T, initialData, fileName string) (*os.File, func()) {
 	t.Helper()
 	tmpFile, err := ioutil.TempFile("", "db")
 
-	if err != nil {
-		t.Fatalf("Could not open file %v", err)
-	}
-
-	tmpFile.WriteString(initialData)
-
-	removeFile := func() {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
-	}
-
-	return tmpFile, removeFile
+	return writeToNewlyCreatedFile(t, tmpFile, err, fileName, initialData)
 }
 
+//CreateTempFileOsOpenFile creates a normal file using os.OpenFile with a cancel() method to delete it
+func CreateTempFileOsOpenFile(t *testing.T, initialData, filePath string) (*os.File, func()) {
+	t.Helper()
+
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0600)
+
+	return writeToNewlyCreatedFile(t, file, err, filePath, initialData)
+}
+
+func writeToNewlyCreatedFile(t *testing.T, file *os.File, err error,
+	fileName, initialData string) (*os.File, func()) {
+
+	if err != nil {
+		t.Fatalf("Could not create and open tempe file %v", err)
+	}
+
+	close := func() {
+		file.Close()
+		os.Remove(fileName)
+	}
+
+	_, err = file.WriteString(initialData)
+
+	if err != nil {
+		t.Fatalf("Failed to write to file %v", err)
+	}
+
+	file.Seek(0, 0)
+
+	return file, close
+}
+
+//AssertNoError checks that the error given to it is nil and returns an error if it is not
 func AssertNoError(t *testing.T, err error) {
 	t.Helper()
 

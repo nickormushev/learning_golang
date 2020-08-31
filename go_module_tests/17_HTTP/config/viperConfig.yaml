@@ -1,0 +1,5 @@
+database:
+   fileName: "game.db.json"
+
+server:
+   port: ":8000"

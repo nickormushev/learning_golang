@@ -6,7 +6,7 @@ import (
 )
 
 func TestTapeWrite(t *testing.T) {
-	file, clean := CreateTempFile(t, "12345")
+	file, clean := CreateTempFile(t, "12345", fileName)
 	defer clean()
 
 	tape := &tape{file}
