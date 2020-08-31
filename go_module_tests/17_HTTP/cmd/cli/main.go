@@ -10,7 +10,6 @@ import (
 var dbFileName string = "cli.db.json"
 
 func main() {
-
 	store, dbClose, err := poker.GenerateFileSystemPlayerStore(dbFileName)
 
 	defer dbClose()

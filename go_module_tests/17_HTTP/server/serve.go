@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 //Server is an abstraction of a http.server
@@ -49,9 +51,18 @@ func CreateApplication(conf configuration.Configuration, server Server, dbClose 
 	}
 }
 
-//CreateDefaultApplication creates an http server and calls listen and serve
-func CreateDefaultApplication(conf configuration.Configuration) *Application {
-	store, dbClose, err := poker.GenerateFileSystemPlayerStore(conf.GetDatabaseFileName())
+//CreateDefaultApplication reads a config file and creates a new application
+//This depends on all other types of objects and does not adhere to the SOLID principle
+//Is this bad? Or is it fine so it is an easy way to run the application
+func CreateDefaultApplication(configFileName, configFilePath string) *Application {
+	appConfig := configuration.NewConfiguration(viper.New())
+	err := appConfig.Read(configFileName, configFilePath, nil)
+
+	if err != nil {
+		log.Fatalf("Could not read startup configuration file %v", err)
+	}
+
+	store, dbClose, err := poker.GenerateFileSystemPlayerStore(appConfig.GetDatabaseFileName())
 
 	if err != nil {
 		log.Fatalf("Could not generate FileSystem player store from file, %v", err)
@@ -64,15 +75,14 @@ func CreateDefaultApplication(conf configuration.Configuration) *Application {
 		log.Fatalf("Failed to create playerServer %v", err)
 	}
 
-	//Maybe inject the server so you can mock it or are theese tests pointless?
 	server := &http.Server{
-		Addr:    conf.GetServerPort(),
+		Addr:    appConfig.GetServerPort(),
 		Handler: playerServer,
 	}
 
 	return &Application{
 		server,
-		conf,
+		appConfig,
 		dbClose,
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-//GenerateFileSystemPlayerStore generates reads a FileSystemPlayerStore from givne file and returns it
+//GenerateFileSystemPlayerStore generates reads a FileSystemPlayerStore from given file and returns it
 func GenerateFileSystemPlayerStore(dbFileName string) (*FileSystemPlayerStore, func(), error) {
 	file, err := os.OpenFile(dbFileName, os.O_RDWR|os.O_CREATE, 0666)
 

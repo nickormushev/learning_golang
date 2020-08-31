@@ -25,7 +25,8 @@ func (g *Game) Win(winner string) {
 	g.store.RecordWin(winner)
 }
 
-//Start is the beggining of the game and it alerts the increase of the blind value after a set amount of time. Tha follows the formula 5 + numberOfPlayers = time.Minutes until increment
+//Start is the beggining of the game and it alerts the increase of the blind value after a set
+//amount of time. Tha follows the formula 5 + numberOfPlayers = time.Minutes until increment
 func (g *Game) Start(numberOfPlayers int, to io.Writer) {
 	blindIncrement := time.Duration(5+numberOfPlayers) * time.Minute
 

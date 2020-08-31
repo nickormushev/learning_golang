@@ -16,19 +16,12 @@ type DefaultConfiguration map[string]interface{}
 //a Configuration structure
 type Reader interface {
 	Unmarshal(rawVal interface{}, opts ...viper.DecoderConfigOption) error
-
 	SetConfigName(configFile string)
-
 	AddConfigPath(configPath string)
-
 	ReadInConfig() error
-
 	GetString(key string) string
-
 	SetDefault(key string, value interface{})
-
 	AutomaticEnv()
-
 	SetEnvPrefix(prefix string)
 }
 

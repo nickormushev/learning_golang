@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+//Constants used for writing tests.
 const (
 	FullFileName   string = "./temp_config.yaml"
 	FileName       string = "temp_config"
