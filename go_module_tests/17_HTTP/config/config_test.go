@@ -4,7 +4,8 @@ import (
 	"fmt"
 	poker "learning/17_HTTP"
 	configuration "learning/17_HTTP/config"
-	"strconv"
+	repo "learning/17_HTTP/config/viper"
+	"reflect"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -32,82 +33,59 @@ var defaultConfig map[string]interface{} = map[string]interface{}{
 	"database.port":     1234,
 }
 
-type SpyViper struct {
-	configFile         string
-	configPath         string
-	envPrefix          string
-	automaticEnvCalled bool
-	dbFileName         string
-	serverPort         string
-	dbName             string
+type SpyReader struct {
+	unmarshalProperlyCalled bool
+	defaultConfig           repo.DefaultConfiguration
+	fileName, filePath      string
 }
 
-func (s *SpyViper) Unmarshal(rawConf interface{}, opts ...viper.DecoderConfigOption) error {
-	conf := rawConf.(configuration.Configuration)
-	conf.SetDatabaseFileName(s.dbFileName)
-	conf.SetServerPort(s.serverPort)
+func (s *SpyReader) Unmarshal(rawConf interface{}) error {
+	if _, ok := rawConf.(configuration.Configuration); ok {
+		s.unmarshalProperlyCalled = true
+	}
 
 	return nil
 }
 
-func (s *SpyViper) GetString(key string) string {
-	switch key {
-	case "database.fileName":
-		return s.dbFileName
-	case "database.name":
-		return s.dbName
-	case "server.port":
-		return s.serverPort
-	default:
-		return ""
-	}
+func (s *SpyReader) LoadDefaultConfiguration(defaultConfig repo.DefaultConfiguration) {
+	s.defaultConfig = defaultConfig
 }
 
-func (s *SpyViper) SetConfigName(configFile string) {
-	s.configFile = configFile
-}
-
-func (s *SpyViper) SetDefault(key string, value interface{}) {
-	switch key {
-	case "database.fileName":
-		s.dbFileName = value.(string)
-	case "database.name":
-		s.dbName = value.(string)
-	case "server.port":
-		s.serverPort = strconv.Itoa(value.(int))
-	}
-}
-
-func (s *SpyViper) AddConfigPath(configPath string) {
-	s.configPath = configPath
-}
-
-func (s *SpyViper) ReadInConfig() error {
-	s.serverPort = testConfigServerPort
-	s.dbFileName = testConfigDbFileName
+func (s *SpyReader) LoadFromFile(fileName, filePath string) error {
+	s.fileName = fileName
+	s.filePath = filePath
 
 	return nil
-}
-
-func (s *SpyViper) AutomaticEnv() {
-	if s.envPrefix != "" {
-		s.automaticEnvCalled = true
-	}
-}
-
-func (s *SpyViper) SetEnvPrefix(prefix string) {
-	s.envPrefix = prefix
 }
 
 func TestConfigurationRead(t *testing.T) {
 	t.Run("Reads default config and config file when given nonempty string unit", func(t *testing.T) {
-		vpr := &SpyViper{}
-		conf := configuration.NewConfiguration(vpr)
-		assertDefaultConfigLoadedUnmarshal(t, conf)
+		reader := &SpyReader{}
+		conf := configuration.NewConfiguration(reader)
+
+		err := conf.Read("", "", defaultConfig)
+
+		poker.AssertNoError(t, err)
+
+		if !reflect.DeepEqual(map[string]interface{}(defaultConfig),
+			map[string]interface{}(reader.defaultConfig)) {
+
+			t.Fatalf("Default config not properly loaded. Got: %v wanted %v",
+				reader.defaultConfig, defaultConfig)
+		}
+
+		if !reader.unmarshalProperlyCalled {
+			t.Fatalf("Unmarshal was not called properly!")
+		}
+
+		if reader.fileName != "" || reader.filePath != "" {
+			t.Errorf("LoadFromFile file was called but shouldn't have been")
+		}
+
 	})
 
 	t.Run("Reads only default config when given empty string unit", func(t *testing.T) {
-		vpr := &SpyViper{}
+		vpr := &SpyReader{}
 		conf := configuration.NewConfiguration(vpr)
 		wantedFilePath := "."
 
@@ -122,76 +100,76 @@ func TestConfigurationRead(t *testing.T) {
 		assertPort(t, vpr.serverPort, testConfigServerPort)
 	})
 
-	t.Run("Reads default config when given empty string", func(t *testing.T) {
-		_, clean := poker.CreateTempFileOsOpenFile(t, testConfig, fullFileName)
-		defer clean()
-		conf := configuration.NewConfiguration(viper.New())
-		assertDefaultConfigLoadedUnmarshal(t, conf)
-	})
+	//t.Run("Reads default config when given empty string", func(t *testing.T) {
+	//_, clean := poker.CreateTempFileOsOpenFile(t, testConfig, fullFileName)
+	//defer clean()
+	//conf := configuration.NewConfiguration(viper.New())
+	//assertDefaultConfigLoadedUnmarshal(t, conf)
+	//})
 
-	t.Run("Reads config from file when give a non empty string", func(t *testing.T) {
-		_, clean := poker.CreateTempFileOsOpenFile(t, testConfig, fullFileName)
-		defer clean()
+	//t.Run("Reads config from file when give a non empty string", func(t *testing.T) {
+	//_, clean := poker.CreateTempFileOsOpenFile(t, testConfig, fullFileName)
+	//defer clean()
 
-		conf := configuration.NewConfiguration(viper.New())
-		err := conf.Read(fileName, ".", defaultConfig)
+	//conf := configuration.NewConfiguration(viper.New())
+	//err := conf.Read(fileName, ".", defaultConfig)
 
-		poker.AssertNoError(t, err)
-		assertDbName(t, conf.GetDatabaseFileName(), testConfigDbFileName)
-	})
+	//poker.AssertNoError(t, err)
+	//assertDbName(t, conf.GetDatabaseFileName(), testConfigDbFileName)
+	//})
 }
 
-func TestReadV2(t *testing.T) {
-	t.Run("Read loads default config when given an nil", func(t *testing.T) {
-		vpr, err := configuration.ReadV2(nil, defaultConfig)
-		assertDefaultConfigLoaded(t, err, vpr)
-	})
+//func TestReadV2(t *testing.T) {
+//t.Run("Read loads default config when given an nil", func(t *testing.T) {
+//vpr, err := configuration.ReadV2(nil, defaultConfig)
+//assertDefaultConfigLoaded(t, err, vpr)
+//})
 
-	t.Run("Read overloads defaultConfig when given a config file", func(t *testing.T) {
-		file, clean := poker.CreateTempFile(t, testConfig, fileName)
-		defer clean()
+//t.Run("Read overloads defaultConfig when given a config file", func(t *testing.T) {
+//file, clean := poker.CreateTempFile(t, testConfig, fileName)
+//defer clean()
 
-		vpr, err := configuration.ReadV2(file, defaultConfig)
+//vpr, err := configuration.ReadV2(file, defaultConfig)
 
-		poker.AssertNoError(t, err)
-		assertDbName(t, vpr.GetString("database.name"), "Postgres")
-		assertDbPort(t, vpr.GetInt("database.port"), 1234)
-	})
-}
+//poker.AssertNoError(t, err)
+//assertDbName(t, vpr.GetString("database.name"), "Postgres")
+//assertDbPort(t, vpr.GetInt("database.port"), 1234)
+//})
+//}
 
-func TestRead(t *testing.T) {
-	t.Run("Read loads default config when given an empty string", func(t *testing.T) {
-		vpr, err := configuration.Read("", "", defaultConfig)
-		assertDefaultConfigLoaded(t, err, vpr)
-	})
+//func TestRead(t *testing.T) {
+//t.Run("Read loads default config when given an empty string", func(t *testing.T) {
+//vpr, err := configuration.Read("", "", defaultConfig)
+//assertDefaultConfigLoaded(t, err, vpr)
+//})
 
-	t.Run("Read overloads defaultConfig when given a config file", func(t *testing.T) {
-		_, clean := poker.CreateTempFileOsOpenFile(t, testConfig, fullFileName)
-		defer clean()
+//t.Run("Read overloads defaultConfig when given a config file", func(t *testing.T) {
+//_, clean := poker.CreateTempFileOsOpenFile(t, testConfig, fullFileName)
+//defer clean()
 
-		vpr, err := configuration.Read(fileName, ".", defaultConfig)
+//vpr, err := configuration.Read(fileName, ".", defaultConfig)
 
-		poker.AssertNoError(t, err)
-		assertDbName(t, vpr.GetString("database.name"), "Postgres")
-		assertDbPort(t, vpr.GetInt("database.port"), 1234)
-	})
-}
+//poker.AssertNoError(t, err)
+//assertDbName(t, vpr.GetString("database.name"), "Postgres")
+//assertDbPort(t, vpr.GetInt("database.port"), 1234)
+//})
+//}
 
-func assertDefaultConfigLoadedUnmarshal(t *testing.T, conf configuration.Configuration) {
-	t.Helper()
-	err := conf.Read("", "", defaultConfig)
+//func assertDefaultConfigLoadedUnmarshal(t *testing.T, conf configuration.Configuration) {
+//t.Helper()
+//err := conf.Read("", "", defaultConfig)
 
-	poker.AssertNoError(t, err)
-	want := defaultConfig["database.fileName"].(string)
-	got := conf.GetDatabaseFileName()
-	assertDbName(t, got, want)
+//poker.AssertNoError(t, err)
+//want := defaultConfig
+//got := reader()
+//assertDbName(t, got, want)
 
-	want = strconv.Itoa(defaultConfig["server.port"].(int))
-	got = conf.GetServerPort()
-	assertPort(t, got, want)
-}
+//want = strconv.Itoa(defaultConfig["server.port"].(int))
+//got = conf.GetServerPort()
+//assertPort(t, got, want)
+//}
 
-func assertDefaultConfigLoaded(t *testing.T, err error, read configuration.Reader) {
+func assertDefaultConfigLoaded(t *testing.T, err error, read *viper.Viper) {
 	t.Helper()
 	poker.AssertNoError(t, err)
 
@@ -221,24 +199,24 @@ func assertPort(t *testing.T, got, want string) {
 		fmt.Sprintf("Did not load configuration properly. Port mismatch: Wanted %s but got %s", want, got))
 }
 
-func assertAutomaticEnvCalled(t *testing.T, vpr *SpyViper) {
-	t.Helper()
-	if !vpr.automaticEnvCalled {
-		t.Fatalf("Invalid config file read: got %s but wanted %s", vpr.configFile, fileName)
-	}
-}
+//func assertAutomaticEnvCalled(t *testing.T, vpr *SpyViper) {
+//t.Helper()
+//if !vpr.automaticEnvCalled {
+//t.Fatalf("Invalid config file read: got %s but wanted %s", vpr.configFile, fileName)
+//}
+//}
 
-func assertConfigFileName(t *testing.T, vpr *SpyViper, wantedName, wantedFilePath string) {
-	t.Helper()
+//func assertConfigFileName(t *testing.T, vpr *SpyViper, wantedName, wantedFilePath string) {
+//t.Helper()
 
-	if vpr.configFile != fileName {
-		t.Fatalf("Invalid config file read: got %s but wanted %s", vpr.configFile, fileName)
-	}
+//if vpr.configFile != fileName {
+//t.Fatalf("Invalid config file read: got %s but wanted %s", vpr.configFile, fileName)
+//}
 
-	if vpr.configPath != wantedFilePath {
-		t.Fatalf("Invalid config file read: got %s but wanted %s", vpr.configFile, fileName)
-	}
-}
+//if vpr.configPath != wantedFilePath {
+//t.Fatalf("Invalid config file read: got %s but wanted %s", vpr.configFile, fileName)
+//}
+//}
 
 func asserStrings(t *testing.T, got, want, errMsg string) {
 	t.Helper()

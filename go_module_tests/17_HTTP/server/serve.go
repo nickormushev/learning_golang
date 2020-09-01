@@ -4,13 +4,12 @@ import (
 	"context"
 	poker "learning/17_HTTP"
 	configuration "learning/17_HTTP/config"
+	viperRepo "learning/17_HTTP/config/viper"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 //Server is an abstraction of a http.server
@@ -52,10 +51,9 @@ func CreateApplication(conf configuration.Configuration, server Server, dbClose 
 }
 
 //CreateDefaultApplication reads a config file and creates a new application
-//This depends on all other types of objects and does not adhere to the SOLID principle
-//Is this bad? Or is it fine so it is an easy way to run the application
 func CreateDefaultApplication(configFileName, configFilePath string) *Application {
-	appConfig := configuration.NewConfiguration(viper.New())
+	vprRepo := viperRepo.NewViperReader()
+	appConfig := configuration.NewConfiguration(vprRepo)
 	err := appConfig.Read(configFileName, configFilePath, nil)
 
 	if err != nil {

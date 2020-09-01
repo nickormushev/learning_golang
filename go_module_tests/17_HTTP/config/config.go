@@ -5,25 +5,11 @@ import (
 	"io"
 	"log"
 
+	repo "learning/17_HTTP/config/viper"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
-
-//DefaultConfiguration is a structure that respresents the config required to start the application
-type DefaultConfiguration map[string]interface{}
-
-//Reader is an interface that reads configuration from a file and maps it it to
-//a Configuration structure
-type Reader interface {
-	Unmarshal(rawVal interface{}, opts ...viper.DecoderConfigOption) error
-	SetConfigName(configFile string)
-	AddConfigPath(configPath string)
-	ReadInConfig() error
-	GetString(key string) string
-	SetDefault(key string, value interface{})
-	AutomaticEnv()
-	SetEnvPrefix(prefix string)
-}
 
 //Configuration is an abstract interface representing that that must be accessible from a config
 type Configuration interface {
@@ -31,12 +17,12 @@ type Configuration interface {
 	SetDatabaseFileName(newFileName string)
 	GetServerPort() string
 	GetDatabaseFileName() string
-	Read(configFileName, configFilePath string, defaultConfig DefaultConfiguration) error
+	Read(configFileName, configFilePath string, defaultConfig repo.DefaultConfiguration) error
 }
 
 //ConfigurationImpl is a type that holds the data required for the application to run
 type ConfigurationImpl struct {
-	reader   Reader
+	reader   repo.Reader
 	Server   ServerConfiguration
 	Database DatabaseConfiguration
 }
@@ -52,7 +38,7 @@ type DatabaseConfiguration struct {
 }
 
 //NewConfiguration creates a configuration with an empty viper
-func NewConfiguration(vpr Reader) Configuration {
+func NewConfiguration(vpr repo.Reader) Configuration {
 	return &ConfigurationImpl{
 		vpr,
 		ServerConfiguration{},
@@ -83,42 +69,19 @@ func (c *ConfigurationImpl) GetServerPort() string {
 //Read generates the server viper configuration. You can give a default configuration not loaded
 //from a file by giving an empty string for a fileName or filePath.
 func (c *ConfigurationImpl) Read(configFileName, configFilePath string,
-	defaultConfig DefaultConfiguration) error {
+	defaultConfig repo.DefaultConfiguration) error {
 
 	log.Printf("Loading default configuration")
-	c.loadDefaultConfiguration(defaultConfig)
+	c.reader.LoadDefaultConfiguration(defaultConfig)
 
 	if configFileName != "" && configFilePath != "" {
 		log.Printf("Loading configuration from file")
-		c.loadFromFile(configFileName, configFilePath)
+		c.reader.LoadFromFile(configFileName, configFilePath)
 	}
 
 	err := c.reader.Unmarshal(c)
 	if err != nil {
-		return errors.Wrap(err, "Could not unmarshal")
-	}
-
-	return nil
-}
-
-func (c *ConfigurationImpl) loadDefaultConfiguration(defaultConfig DefaultConfiguration) {
-	for key, value := range defaultConfig {
-		c.reader.SetDefault(key, value)
-	}
-}
-
-func (c *ConfigurationImpl) loadFromFile(configFileName, configFilePath string) error {
-	c.reader.SetEnvPrefix("vpr")
-	c.reader.SetConfigName(configFileName)
-	c.reader.AddConfigPath(configFilePath)
-	c.reader.AutomaticEnv()
-	err := c.reader.ReadInConfig()
-
-	if err != nil {
-		errText := fmt.Sprintf("Error reading configuration file: %s with path %s, %v",
-			configFileName, configFilePath, err)
-
-		return errors.Wrap(err, errText)
+		return errors.Wrap(err, "Reader failed to Unmarshal")
 	}
 
 	return nil
@@ -126,7 +89,7 @@ func (c *ConfigurationImpl) loadFromFile(configFileName, configFilePath string) 
 
 //Read generates the server viper configuration. You can give a default configuration not loaded
 //from a file by giving an empty string for a fileName or filePath.
-func Read(configFileName, configFilePath string, defaultConfig DefaultConfiguration) (*viper.Viper, error) {
+func Read(configFileName, configFilePath string, defaultConfig repo.DefaultConfiguration) (*viper.Viper, error) {
 	vCfg := viper.New()
 
 	loadDefaultConfiguration(vCfg, defaultConfig)
@@ -145,7 +108,7 @@ func Read(configFileName, configFilePath string, defaultConfig DefaultConfigurat
 	return vCfg, nil
 }
 
-func loadDefaultConfiguration(vCfg *viper.Viper, defaultConfig DefaultConfiguration) {
+func loadDefaultConfiguration(vCfg *viper.Viper, defaultConfig repo.DefaultConfiguration) {
 	for key, value := range defaultConfig {
 		vCfg.SetDefault(key, value)
 	}
@@ -169,7 +132,7 @@ func loadFromFile(vCfg *viper.Viper, configFileName, configFilePath string) erro
 }
 
 //ReadV2 takes in an io.Reader and reads it
-func ReadV2(reader io.Reader, defaultConfig DefaultConfiguration) (*viper.Viper, error) {
+func ReadV2(reader io.Reader, defaultConfig repo.DefaultConfiguration) (*viper.Viper, error) {
 	vCfg := viper.New()
 	loadDefaultConfiguration(vCfg, defaultConfig)
 
